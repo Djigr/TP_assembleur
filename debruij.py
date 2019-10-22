@@ -26,12 +26,20 @@ def read_fastq(fich):
                 yield line
 
 
-#def cut_kmer(seq,k):
-    
+def cut_kmer(seq,k):
+    for i in seq:
+        yield seq[i:i+k]
 
 
-#def build_kmer_dict(fich, k):
-    
+def build_kmer_dict(fastq_file,k):
+    dict_kmer={}
+    list_seq = [x[:-1] for x in read_fastq(fastq_file)]
+    for kmer in cut_kmer(list_seq, k):
+        if kmer not in dict_kmer.keys():
+            dict_kmer[kmer] = 1
+        else:
+            dict_kmer[kmer] += 1
+    return dict_kmer   
 
 
 if __name__=="__main__":
