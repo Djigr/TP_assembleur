@@ -16,16 +16,11 @@ def main():
         #for j in cut_kmer(i, k):
             #print(j)
     print(build_kmer_dict(args.input.name, k))
-    for i in build_graph(build_kmer_dict(args.input.name, k)):
-        print(i)
     graph = build_graph(build_kmer_dict(args.input.name, k))
-    for i in get_starting_nodes(graph):
+    print(get_starting_nodes(graph))
+    for i in get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph)):
         print(i)
-    if len(get_starting_nodes(graph))==0:
-        print('This is empty')
-    #for i in get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph)):
-     #   print(i)
-    #print(get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph)))
+    #print("la liste des contigs est telle :",get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph)))
 
 
 def read_fastq(fich):
@@ -38,7 +33,7 @@ def read_fastq(fich):
                 lire = False
             else:
                 if lire:
-                    yield line
+                    yield line[:-1]
 
 
 def cut_kmer(seq, k):
@@ -77,6 +72,7 @@ def get_starting_nodes(graph):
     return startnodes
 
 
+
 def std():
     pass
 
@@ -113,7 +109,10 @@ def get_contigs(graph, start, sink):
         for sinknode in sink:
             for path in nx.all_simple_paths(graph, startnode, sinknode):
                 print(path)
-                contigs.append([startnode[0]+sinknode])
+                new_cont = path[0]
+                for j in range(len(new_cont),len(path)):
+                    new_cont+=path[j][-1]
+                contigs.append([new_cont, len(new_cont)])
     return contigs
 
 
