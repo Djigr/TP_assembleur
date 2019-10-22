@@ -10,6 +10,11 @@ def main():
 
     args = parser.parse_args()
 
+def read_fastq(fich):
+    for line in fich():
+        yieldnext(fich)
+        next(fich)
+        next(fich)
 
 if __name__=="__main__":
     main()
