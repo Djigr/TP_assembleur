@@ -38,14 +38,14 @@ def read_fastq(fich):
 
 def cut_kmer(seq, k):
     """Cut a sequence into kmers"""
-    for i in range(len(seq)-k):
+    for i in range(len(seq)-k+1):
         yield seq[i:i+k]
 
 
 def build_kmer_dict(fastq_file, k):
     """Builds the kmer dictionnary"""
     dict_kmer = {}
-    list_seq = [x[:-1] for x in read_fastq(fastq_file)]
+    list_seq = [x for x in read_fastq(fastq_file)]
     for j in list_seq:
         for kmer in cut_kmer(j, k):
             if kmer not in dict_kmer.keys():
@@ -59,7 +59,7 @@ def build_graph(dict_kmer):
     """Builds the graph by taking into account the kmer dictionnary"""
     dg = nx.DiGraph()
     for kmer in dict_kmer:
-        dg.add_edge(kmer[:-1], kmer[1:len(kmer)], weight=dict_kmer[kmer])
+        dg.add_edge(kmer[:-1], kmer[1:], weight=dict_kmer[kmer])
     return dg
 
 
@@ -98,7 +98,10 @@ def select_best_path():
     pass
 
 
-def save_contigs():
+def save_contigs(cont,length,fich_sort):
+    """Saves the found contigs in a text file"""
+    fich = open(fich_sort,"w")
+    fich.write(
     pass
 
 
@@ -107,11 +110,13 @@ def get_contigs(graph, start, sink):
     contigs = []
     for startnode in start:
         for sinknode in sink:
-            for path in nx.all_simple_paths(graph, startnode, sinknode):
+            for path in nx.all_simple_paths(graph, source = startnode, target = sinknode):
                 print(path)
-                new_cont = path[0]
-                for j in range(len(new_cont),len(path)):
-                    new_cont+=path[j][-1]
+                new_cont = []
+                new_cont.append(path[0])
+                for j in range(1,len(path)):
+                    new_cont.append(path[j][-1:])
+                new_cont="".join(new_cont)
                 contigs.append([new_cont, len(new_cont)])
     return contigs
 
