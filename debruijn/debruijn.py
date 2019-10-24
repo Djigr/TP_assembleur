@@ -1,12 +1,13 @@
 import os
 import argparse
 import statistics
+import random
 import networkx as nx
-import matplotlib as mp
 
 def main():
     """Parses the argument and produces the graph expected"""
-    parser = argparse.ArgumentParser(prog='debruijn.py', description='Assembling by Debruijn graphs')
+    parser = argparse.ArgumentParser(prog='debruijn.py',
+                                    description='Assembling by Debruijn graphs')
     parser.add_argument('input', nargs='?', type=argparse.FileType('r'), help='Read my file')
     parser.add_argument('-i', type=str, help='fichier fastq single end')
     parser.add_argument('-k', type=int, default=21, help='kmer size (optional - default = 21)')
@@ -14,25 +15,15 @@ def main():
 
     args = parser.parse_args()
     k = int(args.k)
-    #for i in read_fastq(args.input.name):
-        #print(i)
-        #for j in cut_kmer(i, k):
-            #print(j)
     read_fastq(args.input.name)
     build_kmer_dict(args.input.name, k)
     graph = build_graph(build_kmer_dict(args.input.name, k))
-    #nx.draw(graph)
     print(get_starting_nodes(graph))
-    #for i in get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph)):
-    #    print(i)
     contigs = get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph))
     save_contigs(contigs, args.o)
     test_path = ['AACTCACACTGGTAACTTTG', 'ACTCACACTGGTAACTTTGG', 'CTCACACTGGTAACTTTGGA']
     print(graph.nodes)
     path_average_weight(graph, test_path)
-    multipath = [['AACTCACACTGGTAACTTTG', 'ACTCACACTGGTAACTTTGG', 'CTCACACTGGTAACTTTGGA'],['TGGAACTCACACTGGTAACT', 'GGAACTCACACTGGTAACTT', 'GAACTCACACTGGTAACTTT']]
-    remove_paths(graph, multipath, True, False)
-    #print("la liste des contigs est telle :",get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph)))
 
 
 def read_fastq(fich):
@@ -104,28 +95,30 @@ def path_average_weight(graph, path):
     edges = graph.subgraph(path).edges(data=True)
     somme = 0
     count = 0
-    for u,v,e in edges:
+    for node1, node2, edge in edges:
         #print(e["weight"])
-        somme += e["weight"]
+        somme += edge["weight"]
         count += 1
         #print(somme, 'et ', count)
     result = somme/count
-    print("le résultat est ", result)
+    #print("le résultat est ", result)
     return result
 
 
 def remove_paths(graph, multipath, delete_entry_node, delete_sink_node):
+    """Removes nodes from a graph, based on a list of paths, with the choice of
+    deleting the entry node and/or the sink node"""
     for path in multipath:
-        if delete_entry_node == True and delete_sink_node == True:
+        if delete_entry_node and delete_sink_node:
             for node in path:
                 if node in graph.nodes():
                     graph.remove_node(node)
-        elif delete_entry_node == False and delete_sink_node == True:
+        elif delete_entry_node == False and delete_sink_node:
             for node in path[1:]:
                 if node in graph.nodes():
                     graph.remove_node(node)
-        elif delete_entry_node == True and delete_sink_node == False:
-            for node in path[0:-1]:            
+        elif delete_entry_node and delete_sink_node == False:
+            for node in path[0:-1]:
                 if node in graph.nodes():
                     graph.remove_node(node)
         else:
@@ -136,14 +129,29 @@ def remove_paths(graph, multipath, delete_entry_node, delete_sink_node):
     return graph
 
 
-def select_best_path():
-    pass
+def select_best_path(graph, multipath, longueurs, poids,
+                     delete_entry_node=False, delete_sink_node=False):
+    """Choose the best path, first on the basis of the highest weight, then on 
+    the longest, then at random between remaining paths"""
+    random.seed(9001)
+    indice = []
+    max_wei = max(poids)
+    max_len = max(longueurs)
+    indice = [i for i, j in enumerate(poids) if j == max_wei]
+    if len(indice) > 1:
+        indice = [i for i, j in enumerate(longueurs) if j == max_len]
+        if len(indice) > 1:
+            indice = indice[random.randint(0, len(indice))]
+    path = multipath[indice[0]]
+    multipath.remove(path)
+    graph = remove_paths(graph, multipath, delete_entry_node, delete_sink_node)
+    return graph
 
 
 def save_contigs(contigs, fich_sort):
     """Saves the found contigs in a text file"""
     with open(fich_sort, "w") as fich:
-        for i in range(0, len(contigs)):
+        for i in range(0,len(contigs)):
             text = ">contig_"+str(i)+" len={0}\n".format(contigs[i][1])+contigs[i][0]+"\n"
             fich.write(fill(text))
     print("I have created a file with your contigs.")
@@ -165,8 +173,16 @@ def get_contigs(graph, start, sink):
     return contigs
 
 
-def solve_bubble():
-    pass
+def solve_bubble(graph, ante, post):
+    """Removes the bubble from the graph"""
+    multipaths = list(nx.all_simple_paths(graph, ante, post))
+    weights = []
+    lengths = []
+    for path in multipaths:
+        weights.append(path_average_weight(graph, path))
+        lengths.append(len(path))
+    graph = select_best_path(graph, multipaths, lengths, weights)
+    return graph
 
 
 def simplify_bubbles():
