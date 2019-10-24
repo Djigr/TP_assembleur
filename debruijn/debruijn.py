@@ -1,13 +1,14 @@
+import os
 import argparse
 import networkx as nx
 
 def main():
     """Parses the argument and produces the graph expected"""
-    parser = argparse.ArgumentParser(prog='debruij.py', description='Assembling by Debruijn graphs')
+    parser = argparse.ArgumentParser(prog='debruijn.py', description='Assembling by Debruijn graphs')
     parser.add_argument('input', nargs='?', type=argparse.FileType('r'), help='Read my file')
     parser.add_argument('-i', type=str, help='fichier fastq single end')
     parser.add_argument('-k', type=int, default=21, help='kmer size (optional - default = 21)')
-    parser.add_argument('-o', type=str, help='config file')
+    parser.add_argument('-o', type=str, help='contig file')
 
     args = parser.parse_args()
     k = int(args.k)
@@ -20,6 +21,8 @@ def main():
     print(get_starting_nodes(graph))
     for i in get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph)):
         print(i)
+    contigs = get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph))
+    save_contigs(contigs, args.o)
     #print("la liste des contigs est telle :",get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph)))
 
 
@@ -98,11 +101,13 @@ def select_best_path():
     pass
 
 
-def save_contigs(cont,length,fich_sort):
+def save_contigs(contigs, fich_sort):
     """Saves the found contigs in a text file"""
-    fich = open(fich_sort,"w")
-    fich.write(
-    pass
+    with open(fich_sort, "w") as fich:
+        for i in range(0, len(contigs)):
+            text = ">contig_"+str(i)+" len={0}\n".format(contigs[i][1])+contigs[i][0]+"\n"
+            fich.write(fill(text))
+    print("I have created a file with your contigs")
 
 
 def get_contigs(graph, start, sink):
@@ -110,13 +115,13 @@ def get_contigs(graph, start, sink):
     contigs = []
     for startnode in start:
         for sinknode in sink:
-            for path in nx.all_simple_paths(graph, source = startnode, target = sinknode):
+            for path in nx.all_simple_paths(graph, source=startnode, target=sinknode):
                 print(path)
                 new_cont = []
                 new_cont.append(path[0])
-                for j in range(1,len(path)):
+                for j in range(1, len(path)):
                     new_cont.append(path[j][-1:])
-                new_cont="".join(new_cont)
+                new_cont = "".join(new_cont)
                 contigs.append([new_cont, len(new_cont)])
     return contigs
 
