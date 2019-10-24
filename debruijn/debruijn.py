@@ -1,6 +1,8 @@
 import os
 import argparse
+import statistics
 import networkx as nx
+import matplotlib as mp
 
 def main():
     """Parses the argument and produces the graph expected"""
@@ -12,17 +14,24 @@ def main():
 
     args = parser.parse_args()
     k = int(args.k)
-    for i in read_fastq(args.input.name):
-        print(i)
+    #for i in read_fastq(args.input.name):
+        #print(i)
         #for j in cut_kmer(i, k):
             #print(j)
-    print(build_kmer_dict(args.input.name, k))
+    read_fastq(args.input.name)
+    build_kmer_dict(args.input.name, k)
     graph = build_graph(build_kmer_dict(args.input.name, k))
+    #nx.draw(graph)
     print(get_starting_nodes(graph))
-    for i in get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph)):
-        print(i)
+    #for i in get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph)):
+    #    print(i)
     contigs = get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph))
     save_contigs(contigs, args.o)
+    test_path = ['AACTCACACTGGTAACTTTG', 'ACTCACACTGGTAACTTTGG', 'CTCACACTGGTAACTTTGGA']
+    print(graph.nodes)
+    path_average_weight(graph, test_path)
+    multipath = [['AACTCACACTGGTAACTTTG', 'ACTCACACTGGTAACTTTGG', 'CTCACACTGGTAACTTTGGA'],['TGGAACTCACACTGGTAACT', 'GGAACTCACACTGGTAACTT', 'GAACTCACACTGGTAACTTT']]
+    remove_paths(graph, multipath, True, False)
     #print("la liste des contigs est telle :",get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph)))
 
 
@@ -76,8 +85,9 @@ def get_starting_nodes(graph):
 
 
 
-def std():
-    pass
+def std(val):
+    """Calculates the standard deviation of a list of values"""
+    return statistics.stdev(val)
 
 
 def get_sink_nodes(graph):
@@ -89,12 +99,41 @@ def get_sink_nodes(graph):
     return sinknodes
 
 
-def path_average_weight():
-    pass
+def path_average_weight(graph, path):
+    """Takes a graph, a path, and returns an average weight"""
+    edges = graph.subgraph(path).edges(data=True)
+    somme = 0
+    count = 0
+    for u,v,e in edges:
+        #print(e["weight"])
+        somme += e["weight"]
+        count += 1
+        #print(somme, 'et ', count)
+    result = somme/count
+    print("le résultat est ", result)
+    return result
 
 
-def remove_paths():
-    pass
+def remove_paths(graph, multipath, delete_entry_node, delete_sink_node):
+    for path in multipath:
+        if delete_entry_node == True and delete_sink_node == True:
+            for node in path:
+                if node in graph.nodes():
+                    graph.remove_node(node)
+        elif delete_entry_node == False and delete_sink_node == True:
+            for node in path[1:]:
+                if node in graph.nodes():
+                    graph.remove_node(node)
+        elif delete_entry_node == True and delete_sink_node == False:
+            for node in path[0:-1]:            
+                if node in graph.nodes():
+                    graph.remove_node(node)
+        else:
+            for node in path[1:-1]:
+                if node in graph.nodes():
+                    graph.remove_node(node)
+    print(graph.nodes)
+    return graph
 
 
 def select_best_path():
@@ -107,7 +146,7 @@ def save_contigs(contigs, fich_sort):
         for i in range(0, len(contigs)):
             text = ">contig_"+str(i)+" len={0}\n".format(contigs[i][1])+contigs[i][0]+"\n"
             fich.write(fill(text))
-    print("I have created a file with your contigs")
+    print("I have created a file with your contigs.")
 
 
 def get_contigs(graph, start, sink):
@@ -116,7 +155,7 @@ def get_contigs(graph, start, sink):
     for startnode in start:
         for sinknode in sink:
             for path in nx.all_simple_paths(graph, source=startnode, target=sinknode):
-                print(path)
+                #print(path)
                 new_cont = []
                 new_cont.append(path[0])
                 for j in range(1, len(path)):
