@@ -185,8 +185,12 @@ def solve_bubble(graph, ante, post):
     return graph
 
 
-def simplify_bubbles():
-    pass
+def simplify_bubbles(graph):
+    start = get_starting_nodes(graph)
+    sink = get_sink_nodes(graph)
+    for ante in start:
+        for post in sink:
+    return graph
 
 
 def solve_entry_tips():
