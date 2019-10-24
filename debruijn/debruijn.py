@@ -1,3 +1,5 @@
+"""Program that uses debruijn graphs in order to assemble reads"""
+
 import os
 import argparse
 import statistics
@@ -7,9 +9,9 @@ import networkx as nx
 def main():
     """Parses the argument and produces the graph expected"""
     parser = argparse.ArgumentParser(prog='debruijn.py',
-                                    description='Assembling by Debruijn graphs')
+                                     description='Assembling by Debruijn graphs')
     parser.add_argument('input', nargs='?', type=argparse.FileType('r'), help='Read my file')
-    parser.add_argument('-i', type=str, help='fichier fastq single end')
+    parser.add_argument('-i', type=str, help='Fastq file single end')
     parser.add_argument('-k', type=int, default=21, help='kmer size (optional - default = 21)')
     parser.add_argument('-o', type=str, help='contig file')
 
@@ -17,13 +19,13 @@ def main():
     k = int(args.k)
     read_fastq(args.input.name)
     build_kmer_dict(args.input.name, k)
-    graph = build_graph(build_kmer_dict(args.input.name, k))
-    print(get_starting_nodes(graph))
-    contigs = get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph))
-    save_contigs(contigs, args.o)
-    test_path = ['AACTCACACTGGTAACTTTG', 'ACTCACACTGGTAACTTTGG', 'CTCACACTGGTAACTTTGGA']
-    print(graph.nodes)
-    path_average_weight(graph, test_path)
+    #graph = build_graph(build_kmer_dict(args.input.name, k))
+    #print(get_starting_nodes(graph))
+    #contigs = get_contigs(graph, get_starting_nodes(graph), get_sink_nodes(graph))
+    #save_contigs(contigs, args.o)
+    #test_path = ['AACTCACACTGGTAACTTTG', 'ACTCACACTGGTAACTTTGG', 'CTCACACTGGTAACTTTGGA']
+    #print(graph.nodes)
+    #path_average_weight(graph, test_path)
 
 
 def read_fastq(fich):
@@ -125,13 +127,12 @@ def remove_paths(graph, multipath, delete_entry_node, delete_sink_node):
             for node in path[1:-1]:
                 if node in graph.nodes():
                     graph.remove_node(node)
-    print(graph.nodes)
     return graph
 
 
 def select_best_path(graph, multipath, longueurs, poids,
                      delete_entry_node=False, delete_sink_node=False):
-    """Choose the best path, first on the basis of the highest weight, then on 
+    """Choose the best path, first on the basis of the highest weight, then on
     the longest, then at random between remaining paths"""
     random.seed(9001)
     indice = []
@@ -144,14 +145,14 @@ def select_best_path(graph, multipath, longueurs, poids,
             indice = indice[random.randint(0, len(indice))]
     path = multipath[indice[0]]
     multipath.remove(path)
-    graph = remove_paths(graph, multipath, delete_entry_node, delete_sink_node)
+    remove_paths(graph, multipath, delete_entry_node, delete_sink_node)
     return graph
 
 
 def save_contigs(contigs, fich_sort):
     """Saves the found contigs in a text file"""
     with open(fich_sort, "w") as fich:
-        for i in range(0,len(contigs)):
+        for i in range(0, len(contigs)):
             text = ">contig_"+str(i)+" len={0}\n".format(contigs[i][1])+contigs[i][0]+"\n"
             fich.write(fill(text))
     print("I have created a file with your contigs.")
@@ -181,15 +182,20 @@ def solve_bubble(graph, ante, post):
     for path in multipaths:
         weights.append(path_average_weight(graph, path))
         lengths.append(len(path))
-    graph = select_best_path(graph, multipaths, lengths, weights)
+    print(weights)
+    if multipaths != []:
+        select_best_path(graph, multipaths, lengths, weights)
     return graph
 
 
 def simplify_bubbles(graph):
+    """Removes all bubbles from the graph"""
     start = get_starting_nodes(graph)
     sink = get_sink_nodes(graph)
     for ante in start:
         for post in sink:
+            print(ante, post)
+            solve_bubble(graph, ante, post)
     return graph
 
 
